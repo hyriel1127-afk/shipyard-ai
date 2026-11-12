@@ -1,0 +1,6 @@
+{
+  "name": "qna-team-kit",
+  "description": "QnA 팀 공용 에이전트와 스킬",
+  "version": "0.1.0",
+  "author": { "name": "AI 교육팀" }
+}
