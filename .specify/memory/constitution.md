@@ -1,50 +1,105 @@
-# [PROJECT_NAME] Constitution
-<!-- Example: Spec Constitution, TaskFlow Constitution, etc. -->
+# FAQ Board Constitution
 
 ## Core Principles
 
-### [PRINCIPLE_1_NAME]
-<!-- Example: I. Library-First -->
-[PRINCIPLE_1_DESCRIPTION]
-<!-- Example: Every feature starts as a standalone library; Libraries must be self-contained, independently testable, documented; Clear purpose required - no organizational-only libraries -->
+### I. API 테스트 우선 (NON-NEGOTIABLE)
 
-### [PRINCIPLE_2_NAME]
-<!-- Example: II. CLI Interface -->
-[PRINCIPLE_2_DESCRIPTION]
-<!-- Example: Every library exposes functionality via CLI; Text in/out protocol: stdin/args → stdout, errors → stderr; Support JSON + human-readable formats -->
+모든 API(엔드포인트 추가·변경 포함)는 구현 코드보다 테스트를 먼저 작성한다.
+테스트가 실패하는 것(Red)을 확인한 뒤에 구현하고, 통과(Green)시킨 뒤 정리(Refactor)한다.
+테스트 없는 API 변경은 병합할 수 없다.
 
-### [PRINCIPLE_3_NAME]
-<!-- Example: III. Test-First (NON-NEGOTIABLE) -->
-[PRINCIPLE_3_DESCRIPTION]
-<!-- Example: TDD mandatory: Tests written → User approved → Tests fail → Then implement; Red-Green-Refactor cycle strictly enforced -->
+- **근거**: FAQ 게시판의 API 계약(요청/응답/오류)을 먼저 고정해 두면 화면과 서버가
+  독립적으로 개발되고, 이후 변경 시 회귀를 즉시 발견할 수 있다.
+- **확인 방법**:
+  - 테스트: 새·변경 API마다 계약 테스트(성공, 검증 실패, 권한 오류 케이스)가 존재한다.
+  - 명령: 프로젝트의 테스트 실행 명령이 CI와 로컬에서 모두 통과한다.
+  - 리뷰: PR 커밋 이력에서 테스트 커밋이 구현 커밋보다 앞서거나 같은 커밋에 있고,
+    테스트가 구현 없이 실패했음을 PR 설명에 적었는지 확인한다.
 
-### [PRINCIPLE_4_NAME]
-<!-- Example: IV. Integration Testing -->
-[PRINCIPLE_4_DESCRIPTION]
-<!-- Example: Focus areas requiring integration tests: New library contract tests, Contract changes, Inter-service communication, Shared schemas -->
+### II. 최소 외부 패키지
 
-### [PRINCIPLE_5_NAME]
-<!-- Example: V. Observability, VI. Versioning & Breaking Changes, VII. Simplicity -->
-[PRINCIPLE_5_DESCRIPTION]
-<!-- Example: Text I/O ensures debuggability; Structured logging required; Or: MAJOR.MINOR.BUILD format; Or: Start simple, YAGNI principles -->
+외부 패키지는 꼭 필요한 것만 추가한다. 패키지를 추가할 때는 그 이유(해결하는 문제,
+표준 기능·직접 구현으로 충분하지 않은 까닭, 검토한 대안)를 해당 기능의 `plan.md`에 적는다.
+사유가 `plan.md`에 없는 패키지는 추가할 수 없다.
 
-## [SECTION_2_NAME]
-<!-- Example: Additional Constraints, Security Requirements, Performance Standards, etc. -->
+- **근거**: 사내망 환경에서는 패키지 반입·보안 점검 비용이 크고, 의존성이 늘수록
+  취약점과 유지보수 부담이 커진다.
+- **확인 방법**:
+  - 명령: PR의 의존성 파일(`package.json`, `requirements.txt` 등) diff에 새 항목이 있는지 확인한다.
+  - 리뷰: 새 항목마다 `plan.md`에 추가 사유가 적혀 있는지, 더 가벼운 대안이 없는지 검토한다.
 
-[SECTION_2_CONTENT]
-<!-- Example: Technology stack requirements, compliance standards, deployment policies, etc. -->
+### III. 개인정보 로그 금지
 
-## [SECTION_3_NAME]
-<!-- Example: Development Workflow, Review Process, Quality Gates, etc. -->
+이름, 사번 등 개인정보는 어떤 로그(애플리케이션, 접근, 오류, 디버그)에도 남기지 않는다.
+사용자를 식별해야 할 때는 개인정보가 아닌 내부 식별자나 마스킹된 값만 사용한다.
+요청·응답 본문을 통째로 로그에 출력하지 않는다.
 
-[SECTION_3_CONTENT]
-<!-- Example: Code review requirements, testing gates, deployment approval process, etc. -->
+- **근거**: 로그는 접근 통제가 느슨하고 오래 보관되므로, 개인정보가 섞이면 유출 위험과
+  사내 개인정보 보호 규정 위반 위험이 생긴다.
+- **확인 방법**:
+  - 테스트: 이름·사번이 포함된 요청을 보낸 뒤 캡처한 로그 출력에 해당 값이 없음을 검증하는 테스트를 둔다.
+  - 명령: 소스에서 로깅 호출에 이름·사번 필드가 전달되는지 검색한다
+    (예: `grep -rniE "log.*(name|empno|사번)" src`).
+  - 리뷰: 새 로깅 코드와 예외 처리 코드에서 개인정보 포함 여부를 확인한다.
+
+### IV. 한국어 화면과 KST 날짜
+
+사용자에게 보이는 모든 화면 문구(버튼, 안내, 오류 메시지 포함)는 한국어로 작성한다.
+화면에 표시하는 모든 날짜·시각은 KST(Asia/Seoul, UTC+9)로 변환해 표시한다.
+저장 시 시간대는 자유이나, 표시 시에는 KST 변환을 반드시 거친다.
+
+- **근거**: 사용자는 국내 사내 구성원이며, 영어 문구나 UTC 시각은 혼란과 오해
+  (예: 날짜가 하루 어긋나 보임)를 일으킨다.
+- **확인 방법**:
+  - 테스트: UTC 자정 직전·직후 시각이 KST로 올바르게 표시되는지 확인하는 날짜 표시 테스트를 둔다.
+  - 명령: 화면 템플릿에서 영문 문구가 남아 있는지 검색하고 화면을 직접 확인한다.
+  - 리뷰: 새 화면 문구가 한국어인지, 날짜 표시가 공용 KST 변환 함수를 거치는지 확인한다.
+
+### V. 사내망 전용, 외부 CDN 금지
+
+애플리케이션은 사내망에서만 동작해야 하며 외부 인터넷 연결에 의존하지 않는다.
+외부 CDN(스크립트, 스타일, 폰트, 이미지, 아이콘 포함)을 사용하지 않고, 모든 정적 자원은
+저장소에 포함하거나 사내에서 호스팅한다. 런타임에 외부 호스트로 요청을 보내지 않는다.
+
+- **근거**: 사내망은 외부 접속이 차단되어 있어 CDN 자원이 로드되지 않으며,
+  외부 요청은 정보 유출 경로가 될 수 있다.
+- **확인 방법**:
+  - 명령: 소스에서 외부 URL을 검색한다
+    (예: `grep -rnE "https?://(cdn|fonts|unpkg|cdnjs)" src public`).
+  - 테스트: 외부 네트워크를 차단한 환경에서 주요 화면이 정상 로드되는지 확인한다.
+  - 리뷰: 새 자원이 로컬/사내 호스팅인지, 브라우저 네트워크 탭에 외부 호스트 요청이 없는지 확인한다.
 
 ## Governance
-<!-- Example: Constitution supersedes all other practices; Amendments require documentation, approval, migration plan -->
 
-[GOVERNANCE_RULES]
-<!-- Example: All PRs/reviews must verify compliance; Complexity must be justified; Use [GUIDANCE_FILE] for runtime development guidance -->
+본 헌법은 다른 개발 관행과 문서보다 우선한다. 위 다섯 개 원칙 외의 원칙은 두지 않는다.
+원칙을 추가하는 것은 개정 절차를 거친 MINOR 이상의 변경이다.
 
-**Version**: [CONSTITUTION_VERSION] | **Ratified**: [RATIFICATION_DATE] | **Last Amended**: [LAST_AMENDED_DATE]
-<!-- Example: Version: 2.1.1 | Ratified: 2025-06-13 | Last Amended: 2025-07-16 -->
+### 개정 절차
+
+1. 개정 제안자는 변경할 원칙, 변경 사유, 영향 범위(기존 코드·문서의 수정 필요 여부)를
+   PR 설명에 작성한다.
+2. 헌법 개정은 `.specify/memory/constitution.md`를 수정하는 별도 PR로 올리며,
+   다른 기능 변경과 섞지 않는다.
+3. 팀 리뷰어 1명 이상의 승인을 받아야 병합할 수 있다.
+   MAJOR 변경은 팀 전원에게 공지하고 합의 후 병합한다.
+4. 기존 코드가 새 원칙을 위반하게 되면, 같은 PR 또는 후속 작업으로 이행 계획을 남긴다.
+5. 병합 시 버전, 최종 개정일을 갱신한다.
+
+### 버전 규칙
+
+버전은 `MAJOR.MINOR.PATCH` 형식이다.
+
+- **MAJOR**: 기존 원칙의 삭제 또는 의미를 뒤집거나 크게 약화·강화하는 하위 호환되지 않는 변경
+  (예: 사내망 전용 원칙 삭제).
+- **MINOR**: 새 원칙이나 섹션의 추가, 또는 기존 원칙의 지침을 실질적으로 확대하는 변경
+  (예: 여섯 번째 원칙 추가).
+- **PATCH**: 의미가 바뀌지 않는 문구 수정, 오탈자 정정, 확인 방법의 예시 보완.
+
+버전 판단이 모호하면 PR에서 근거를 논의해 결정하며, 결정 사유를 PR 설명에 남긴다.
+
+### 준수 확인
+
+모든 PR 리뷰에서 각 원칙의 "확인 방법"을 체크리스트로 사용한다. 원칙을 지키지 못하는
+예외가 필요하면 `plan.md`에 사유와 기간을 적고 리뷰어의 명시적 승인을 받는다.
+
+**Version**: 1.0.0 | **Ratified**: 2026-11-12 | **Last Amended**: 2026-11-12
