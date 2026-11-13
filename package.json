@@ -3,11 +3,15 @@
   "version": "0.1.0",
   "private": true,
   "type": "module",
-  "engines": { "node": ">=24" },
+  "engines": {
+    "node": ">=24"
+  },
   "scripts": {
     "start": "node src/server.js",
     "test": "node --test",
     "migrate": "node scripts/migrate.js",
-    "admin": "node scripts/admin.js"
+    "admin": "node scripts/admin.js",
+    "seed": "node scripts/seed-test-data.js",
+    "start:demo": "node scripts/start-demo.js"
   }
 }

@@ -5,5 +5,6 @@ export function loadConfig(env = process.env) {
     dbPath: env.QNA_DB ?? './data/qna.sqlite',
     programsPath: env.QNA_PROGRAMS ?? './data/programs.json',
     readonly: env.QNA_READONLY === '1',
+    devLogin: env.QNA_DEV_LOGIN === '1', // 테스트 전용: 비밀번호 없이 사번만으로 로그인
   };
 }

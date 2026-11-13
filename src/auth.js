@@ -25,6 +25,11 @@ export function authenticate(db, empNo, password) {
   return user && ok ? user : null;
 }
 
+// 테스트 전용(QNA_DEV_LOGIN=1). 비밀번호를 확인하지 않는다.
+export function authenticateDev(db, empNo) {
+  return db.prepare('SELECT id, emp_no, name FROM users WHERE emp_no = ?').get(String(empNo ?? '')) ?? null;
+}
+
 const sha256 = (s) => crypto.createHash('sha256').update(s).digest('hex');
 
 export function createSession(db, userId) {
