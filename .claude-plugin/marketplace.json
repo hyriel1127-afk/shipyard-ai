@@ -7,6 +7,11 @@
       "name": "qna-team-kit",
       "source": "./plugins/qna-team-kit",
       "description": "QnA 팀 공용 에이전트와 스킬"
+    },
+    {
+      "name": "qna-helper",
+      "source": "./plugins/qna-helper",
+      "description": "사내 기술 QnA 게시판을 검색해 게시판 내용만 근거로 답하는 플러그인"
     }
   ]
 }
