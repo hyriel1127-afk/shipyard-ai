@@ -10,9 +10,8 @@ const SERVER = fileURLToPath(new URL('../../scripts/mcp-qna-report.js', import.m
 
 // MCP 서버를 띄워 JSON-RPC 요청을 줄 단위로 주고받는다. DATABASE_URL 은 명시한 값만 쓴다(.env 는 읽지 않도록 값을 비워 둔다).
 function startServer(env) {
-  const base = { ...process.env };
-  delete base.DATABASE_URL;
-  const child = spawn(process.execPath, [SERVER], { env: { ...base, ...env }, stdio: ['pipe', 'pipe', 'pipe'] });
+  // 빈 값으로 고정해 두면 프로젝트 .env 의 실제 접속 정보가 시험에 섞이지 않는다(loadEnvFile 은 이미 설정된 값을 덮어쓰지 않는다).
+  const child = spawn(process.execPath, [SERVER], { env: { ...process.env, DATABASE_URL: '', ...env }, stdio: ['pipe', 'pipe', 'pipe'] });
   let buf = '';
   const waiters = new Map();
   child.stdout.setEncoding('utf8');
