@@ -13,5 +13,12 @@
         ]
       }
     ]
+  },
+  "permissions": {
+    "allow": [
+      "Bash(node scripts/weekly-digest.js)",
+      "Bash(node scripts/export-qna-snapshot.js)",
+      "Write(reports/**)"
+    ]
   }
 }

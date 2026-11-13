@@ -12,6 +12,7 @@
     "migrate": "node scripts/migrate.js",
     "admin": "node scripts/admin.js",
     "snapshot": "node scripts/export-snapshot.js",
+    "digest": "node scripts/weekly-digest.js",
     "seed": "node scripts/seed-test-data.js",
     "start:demo": "node scripts/start-demo.js"
   }
