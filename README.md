@@ -22,6 +22,7 @@ npm test                                   # node --test
 | `QNA_DB` | `./data/qna.sqlite` | SQLite 파일 경로 |
 | `QNA_PROGRAMS` | `./data/programs.json` | 유효 프로그램 ID 목록 파일 |
 | `QNA_READONLY` | (없음) | `1`이면 POST를 503으로 막는 읽기 전용 모드 |
+| `QNA_SNAPSHOT_PATH` | `./data/snapshot/qna.md` | 스냅샷 내보내기 출력 파일 |
 
 ## 관리자 CLI (사용자·답변 담당자)
 
@@ -33,6 +34,20 @@ node scripts/admin.js remove-answerer <사번>   # 지정 해제(이전 답변�
 ```
 
 답변 담당자 목록은 화면과 HTTP 응답에 노출되지 않습니다.
+
+## 스냅샷 내보내기 (답변 검색 에이전트용)
+
+답변 검색 에이전트가 게시판 DB를 직접 읽지 않고 파일로만 질문과 답변을 찾도록, 전체 내용을 마크다운 한 파일로 내보냅니다.
+
+```bash
+npm run snapshot        # QNA_DB → ./data/snapshot/qna.md (QNA_SNAPSHOT_PATH로 변경 가능)
+```
+
+- DB를 **읽기 전용**으로 열어 데이터를 바꾸지 않습니다. 작성자 사번·이름은 조회하지 않아 파일에 들어가지 않습니다.
+- 파일 첫 줄은 생성 시각(KST)입니다. 질문이 없으면 생성 시각과 `내보낼 질문이 없습니다`만 씁니다.
+- 임시 파일에 쓴 뒤 교체하므로 실패해도 이전 스냅샷이 남고, 폴더가 없으면 만듭니다.
+- 실패 시 종료 코드 1과 고정 문구(`게시판 DB를 읽을 수 없습니다.` / `스냅샷 파일을 쓸 수 없습니다.`)만 출력합니다.
+- 파일 형식은 `specs/003-qna-snapshot/contracts/snapshot-file.md`, 실행 계약은 `contracts/cli.md`를 따릅니다. 수동 실행만 지원하며 실시간 동기화·외부 전송은 하지 않습니다.
 
 ## 프로그램 ID 목록 편집 (`data/programs.json`)
 
@@ -64,4 +79,4 @@ node scripts/migrate.js down
 
 ## 문서
 
-명세·계획·계약·작업 목록은 `specs/001-qna-board/`에 있습니다.
+명세·계획·계약·작업 목록은 `specs/001-qna-board/`에 있습니다. 스냅샷 내보내기는 `specs/003-qna-snapshot/`입니다.
