@@ -104,7 +104,7 @@
 
 - [X] T039 [US2] `src/handlers/questions.js`의 `list` 확장: `program_id` 쿼리를 trim하여 비어 있으면 전체, 있으면 `WHERE program_id = ?`(정확 일치, 형식·미등록 검증 없이 그대로 질의해 0건이면 빈 목록), `page` 파싱(1 미만·비숫자는 1), `LIMIT 20 OFFSET`, 필터·페이지를 유지하는 링크. 필터는 검색 색인 없이 열 조건으로만 처리 (T035, T037, T038 통과)
 - [X] T040 [US2] `src/handlers/questions.js`의 `detail` 확장: id 검증(양의 정수 아니면 404), 없는 질문 404 렌더링, 답변 등록 순서 조회 (T036 통과)
-- [X] T041 [P] [US2] `src/views/question-list.js` 수정: 프로그램 ID 필터 입력란+"거르기" 버튼+"필터 해제" 링크(레이블 포함, 키보드 사용 가능), 빈 상태 문구 2종, 이전/다음 페이지 링크
+- [X] T041 [P] [US2] `src/views/question-list.js` 수정: 프로그램 ID 필터 입력란+"조회" 버튼+"필터 해제" 링크(레이블 포함, 키보드 사용 가능), 빈 상태 문구 2종, 이전/다음 페이지 링크
 - [X] T042 [P] [US2] `src/views/not-found.js`: "존재하지 않는 질문입니다." + 질문 목록으로 돌아가는 링크, 상태 404
 
 **Checkpoint**: US1과 US2가 모두 독립적으로 동작하고 `npm test` 통과.

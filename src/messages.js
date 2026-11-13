@@ -20,7 +20,7 @@ export const M = {
 
   EMPTY_LIST: '등록된 질문이 없습니다.',
   NO_MATCH: '해당 프로그램 ID의 질문이 없습니다.',
-  FILTER_BUTTON: '거르기',
+  FILTER_BUTTON: '조회',
   CLEAR_FILTER: '필터 해제',
   PREV_PAGE: '이전 페이지',
   NEXT_PAGE: '다음 페이지',

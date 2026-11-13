@@ -1,12 +1,105 @@
-:root { color-scheme: light; }
-body { font-family: "Malgun Gothic", "Apple SD Gothic Neo", system-ui, sans-serif; color: #1a1a1a; background: #ffffff; margin: 0 auto; max-width: 56rem; padding: 1rem; line-height: 1.5; }
-header { border-bottom: 1px solid #767676; margin-bottom: 1rem; }
+/* 디자인 참조: labs/03-design.png (베이지 배경 + 둥근 흰 카드 + 남색 포인트) */
+:root {
+  color-scheme: light;
+  --bg: #ede7e0;
+  --card: #ffffff;
+  --ink: #1a1a1a;
+  --muted: #6b6b6b;
+  --line: #e4ded6;
+  --field-border: #8f8f8f;
+  --accent: #1f4e79;
+  --accent-ink: #ffffff;
+  --danger: #a8321c;
+  --danger-bg: #fbe6df;
+  --notice-bg: #fdf5e0;
+  --notice-ink: #6b5214;
+}
+* { box-sizing: border-box; }
+body {
+  font-family: "Pretendard", "Inter", "Malgun Gothic", "Apple SD Gothic Neo", system-ui, sans-serif;
+  color: var(--ink);
+  background: var(--bg);
+  margin: 0;
+  padding: 3rem 1rem;
+  line-height: 1.5;
+}
+header, main { max-width: 46rem; margin-left: auto; margin-right: auto; }
+header { margin-bottom: 1rem; padding: 0 0.25rem; }
+header h1 { font-size: 1.1rem; margin: 0 0 0.5rem; color: var(--muted); font-weight: 600; }
+main {
+  background: var(--card);
+  border-radius: 1rem;
+  padding: 2rem;
+  box-shadow: 0 10px 30px rgba(60, 45, 30, 0.12);
+}
+main h2 { font-size: 1.75rem; line-height: 1.25; margin: 0 0 1.25rem; font-weight: 800; }
+main h3 { font-size: 1.1rem; margin: 1.5rem 0 0.5rem; }
+
 nav a, nav .user { margin-right: 1rem; }
-a { color: #0b4f9c; }
-a:focus, button:focus, input:focus, textarea:focus { outline: 3px solid #0b4f9c; outline-offset: 2px; }
-table { border-collapse: collapse; width: 100%; }
-th, td { border-bottom: 1px solid #767676; padding: 0.4rem; text-align: left; }
-.error, .error-summary { color: #8a1010; border-left: 4px solid #8a1010; padding-left: 0.5rem; }
-.meta { color: #444444; }
-.question-body, .answer-body { white-space: pre-wrap; }
+nav a { text-decoration: none; font-weight: 600; }
+nav .user { color: var(--muted); }
+a { color: var(--accent); }
+a:focus, button:focus, input:focus, textarea:focus, select:focus { outline: 3px solid var(--accent); outline-offset: 2px; }
+
+/* 입력창·버튼 */
+input[type="text"], input[type="password"], textarea, select {
+  width: 100%;
+  font: inherit;
+  padding: 0.75rem 0.9rem;
+  border: 1px solid var(--field-border);
+  border-radius: 0.65rem;
+  background: #fff;
+  color: var(--ink);
+}
+textarea { min-height: 9rem; resize: vertical; }
+button {
+  font: inherit;
+  font-weight: 700;
+  padding: 0.75rem 1.25rem;
+  border: 0;
+  border-radius: 0.65rem;
+  background: var(--accent);
+  color: var(--accent-ink);
+  cursor: pointer;
+}
+button:hover { background: #173b5c; }
 form.inline { display: inline; }
+form.inline button { background: none; color: var(--accent); padding: 0; font-weight: 600; text-decoration: underline; }
+form.inline button:hover { background: none; }
+label { font-weight: 600; }
+
+/* 목록 필터 줄 */
+form.filter { display: flex; flex-wrap: wrap; gap: 0.6rem; align-items: center; margin-bottom: 1.25rem; }
+form.filter label { flex: 0 0 100%; color: var(--muted); font-size: 0.9rem; }
+form.filter input[type="text"] { flex: 1 1 12rem; width: auto; }
+form.filter a { white-space: nowrap; }
+
+/* 표 */
+table { border-collapse: collapse; width: 100%; }
+th, td { border-bottom: 1px solid var(--line); padding: 0.9rem 0.5rem; text-align: left; }
+th { color: var(--muted); font-size: 0.85rem; font-weight: 500; }
+td.title { font-weight: 700; }
+td.title a { color: var(--ink); text-decoration: none; }
+td.title a:hover { text-decoration: underline; color: var(--accent); }
+td.program-id, td.created-at { color: var(--muted); }
+table th:nth-child(n+3), td.created-at, td.answer-count { text-align: right; font-variant-numeric: tabular-nums; }
+
+/* 알림·오류: 둥근 색 박스 */
+.error, .error-summary {
+  color: var(--danger);
+  background: var(--danger-bg);
+  border-radius: 0.65rem;
+  padding: 0.75rem 1rem;
+  margin: 0 0 1rem;
+}
+.meta { color: var(--muted); font-size: 0.9rem; }
+.question-body, .answer-body { white-space: pre-wrap; }
+.question-body { margin: 1rem 0; }
+ol.answers { padding: 0; list-style: none; }
+ol.answers li { padding: 0.9rem 1rem; margin-bottom: 0.6rem; background: #f7f4f0; border-radius: 0.65rem; }
+.pager { display: flex; justify-content: space-between; margin-top: 1rem; }
+
+@media (max-width: 36rem) {
+  body { padding: 1rem 0.5rem; }
+  main { padding: 1.25rem; }
+}
