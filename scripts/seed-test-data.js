@@ -1,11 +1,12 @@
-// 테스트용 계정·문의글 시드. 사용: node scripts/seed-test-data.js  (대상 DB: QNA_DB, 기본 ./data/test.sqlite)
+// 테스트용 계정·문의글 시드. 사용: node scripts/seed-test-data.js  (대상 DB: DATABASE_URL — 테스트용 Neon 브랜치만 쓸 것)
 // 실행할 때마다 대상 DB의 사용자·질문·답변·세션을 비우고 다시 만든다. 운영 DB에는 사용하지 말 것.
 import fs from 'node:fs';
 import crypto from 'node:crypto';
-import { openDb, migrate } from '../src/db.js';
+import '../src/env.js';
+import { connectNeon, migrate } from '../src/db.js';
+import { loadConfig } from '../src/config.js';
 import { hashPassword } from '../src/auth.js';
 
-const dbPath = process.env.QNA_DB ?? './data/test.sqlite';
 const programsPath = process.env.QNA_PROGRAMS ?? './data/programs.json';
 
 const PROGRAMS = ['HRMS0001', 'ORDR0001', 'ACCT0001']; // 인사관리 / 주문관리 / 회계
@@ -38,26 +39,34 @@ const QUESTIONS = [
 
 fs.writeFileSync(programsPath, JSON.stringify(PROGRAMS) + '\n');
 
-const db = openDb(dbPath);
-migrate(db, 'up');
-for (const t of ['sessions', 'answers', 'questions', 'answerers', 'users']) db.exec(`DELETE FROM ${t}`);
+if (process.env.VERCEL || process.env.NODE_ENV === 'production') {
+  console.error('운영 환경에서는 시드를 실행할 수 없습니다.');
+  process.exit(1);
+}
+const db = connectNeon(loadConfig().databaseUrl);
+await migrate(db, 'up');
+for (const t of ['sessions', 'answers', 'questions', 'answerers', 'users']) await db.exec(`DELETE FROM ${t}`);
 
 const userId = {};
-const insUser = db.prepare('INSERT INTO users(emp_no, name, password_hash) VALUES (?, ?, ?)');
 for (const [empNo, name] of USERS) {
   // 테스트 로그인은 비밀번호를 받지 않는다(QNA_DEV_LOGIN=1). 해시는 추측 불가능한 임의 값.
-  userId[empNo] = Number(insUser.run(empNo, name, hashPassword(crypto.randomUUID())).lastInsertRowid);
+  userId[empNo] = (await db.get('INSERT INTO users(emp_no, name, password_hash) VALUES ($1, $2, $3) RETURNING id', [empNo, name, hashPassword(crypto.randomUUID())])).id;
 }
-for (const e of ANSWERERS) db.prepare('INSERT INTO answerers(emp_no) VALUES (?)').run(e);
+for (const e of ANSWERERS) await db.run('INSERT INTO answerers(emp_no) VALUES ($1)', [e]);
 
 const now = Date.now();
-const insQ = db.prepare('INSERT INTO questions(program_id, title, body, author_id, created_at, form_token) VALUES (?, ?, ?, ?, ?, ?)');
-const insA = db.prepare('INSERT INTO answers(question_id, body, author_id, created_at, form_token) VALUES (?, ?, ?, ?, ?)');
 // 오래된 글부터 넣어 id 가 시간순이 되게 한다.
 for (const [prog, author, title, body, daysAgo, ans] of [...QUESTIONS].sort((a, b) => b[4] - a[4])) {
   const created = now - daysAgo * DAY - Math.floor(Math.random() * 4 * 60 * 60 * 1000);
-  const qid = Number(insQ.run(prog, title, body, userId[author], created, crypto.randomUUID()).lastInsertRowid);
-  if (ans) insA.run(qid, ans[1], userId[ans[0]], created + 2 * 60 * 60 * 1000, crypto.randomUUID());
+  const { id: qid } = await db.get(
+    'INSERT INTO questions(program_id, title, body, author_id, created_at, form_token) VALUES ($1, $2, $3, $4, $5, $6) RETURNING id',
+    [prog, title, body, userId[author], created, crypto.randomUUID()],
+  );
+  if (ans) {
+    await db.run('INSERT INTO answers(question_id, body, author_id, created_at, form_token) VALUES ($1, $2, $3, $4, $5)', [
+      qid, ans[1], userId[ans[0]], created + 2 * 60 * 60 * 1000, crypto.randomUUID(),
+    ]);
+  }
 }
-db.close();
-console.log(`시드 완료: DB=${dbPath}, 사용자 ${USERS.length}명, 프로그램 ${PROGRAMS.length}개, 질문 ${QUESTIONS.length}건`);
+await db.close();
+console.log(`시드 완료: 사용자 ${USERS.length}명, 프로그램 ${PROGRAMS.length}개, 질문 ${QUESTIONS.length}건`);

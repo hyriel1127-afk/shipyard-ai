@@ -3,7 +3,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { loadConfig } from './config.js';
-import { openDb, migrate } from './db.js';
+import { connectNeon, migrate } from './db.js';
 import { createPrograms } from './programs.js';
 import { getSession, parseCookies } from './auth.js';
 import { event } from './logger.js';
@@ -29,7 +29,20 @@ const routes = [
   ['POST', /^\/questions\/([^/]+)\/answers$/, '/questions/:id/answers', true, answers.create],
 ];
 
+function fromParsed(body) {
+  const out = {};
+  const params = typeof body === 'string' || Buffer.isBuffer(body) ? new URLSearchParams(body.toString('utf8')) : null;
+  if (params) {
+    for (const [k, v] of params) out[k] = k in out ? [].concat(out[k], v) : v;
+  } else if (body && typeof body === 'object') {
+    for (const [k, v] of Object.entries(body)) out[k] = v;
+  }
+  return out;
+}
+
 function readBody(req) {
+  // Vercel Node 런타임은 req.body 를 먼저 해석해 줄 수 있다. 있으면 스트림 대신 그것을 쓴다.
+  if (req.body !== undefined && req.body !== null) return Promise.resolve(fromParsed(req.body));
   return new Promise((resolve, reject) => {
     const chunks = [];
     let size = 0;
@@ -52,14 +65,11 @@ function readBody(req) {
   });
 }
 
-export async function createApp(opts = {}) {
-  const cfg = { ...loadConfig(), ...opts };
-  const db = openDb(cfg.dbPath);
-  migrate(db, 'up');
-  const programs = createPrograms(cfg.programsPath);
+// 요청 처리기. 로컬 http 서버와 Vercel 함수(api/index.js)가 같은 처리기를 쓴다.
+export function createHandler({ db, cfg, programs }) {
   const css = fs.readFileSync(path.join(root, 'public', 'style.css'));
 
-  const server = http.createServer(async (req, res) => {
+  return async (req, res) => {
     let routeTemplate = '/:unknown';
     res.on('finish', () => {
       event({ event: 'http.access', result: String(res.statusCode), method: req.method === 'POST' ? 'POST' : 'GET', route: routeTemplate });
@@ -100,7 +110,7 @@ export async function createApp(opts = {}) {
       const sessionToken = parseCookies(req.headers.cookie).sid;
       let session = null;
       if (needAuth) {
-        session = getSession(db, sessionToken);
+        session = await getSession(db, sessionToken);
         if (!session && needAuth !== 'optional') {
           event({ event: 'auth.required', result: 'denied' });
           return send(401, messagePage({ title: M.LOGIN_REQUIRED, message: M.LOGIN_REQUIRED, linkHref: '/login', linkText: M.LOGIN }));
@@ -131,7 +141,19 @@ export async function createApp(opts = {}) {
       if (!res.headersSent) send(500, messagePage({ title: M.SERVER_ERROR, message: M.SERVER_ERROR, linkHref: '/', linkText: M.BACK_TO_LIST }));
       else res.end();
     }
-  });
+  };
+}
+
+
+// 로컬 실행용 서버. opts.db 를 주면 그것을 쓰고(테스트), 없으면 DATABASE_URL 로 Neon 에 연결한다.
+// 마이그레이션은 opts.migrate 가 true 일 때만 자동 실행한다(Vercel 에서는 배포 전에 npm run migrate 로 따로 실행).
+export async function createApp(opts = {}) {
+  const { db: injected, migrate: autoMigrate = false, ...rest } = opts;
+  const cfg = { ...loadConfig(), ...rest };
+  const db = injected ?? connectNeon(cfg.databaseUrl);
+  if (autoMigrate) await migrate(db, 'up');
+  const programs = createPrograms(cfg.programsPath);
+  const server = http.createServer(createHandler({ db, cfg, programs }));
 
   await new Promise((resolve) => server.listen(cfg.port, cfg.host ?? '127.0.0.1', resolve));
   const port = server.address().port;
@@ -143,12 +165,13 @@ export async function createApp(opts = {}) {
     close: async () => {
       server.closeAllConnections?.();
       await new Promise((resolve) => server.close(resolve));
-      db.close();
+      await db.close();
     },
   };
 }
 
 if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
-  const app = await createApp();
+  await import('./env.js');
+  const app = await createApp({ ...loadConfig(), migrate: true });
   console.log(`listening on ${app.url}`);
 }

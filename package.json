@@ -15,5 +15,11 @@
     "digest": "node scripts/weekly-digest.js",
     "seed": "node scripts/seed-test-data.js",
     "start:demo": "node scripts/start-demo.js"
+  },
+  "dependencies": {
+    "@neondatabase/serverless": "^1.2.0"
+  },
+  "devDependencies": {
+    "@electric-sql/pglite": "^0.5.16"
   }
 }

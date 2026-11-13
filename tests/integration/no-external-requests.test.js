@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import path from 'node:path';
-import { startApp, seedUser, loggedInClient, Client } from '../helpers/server.js';
+import { startApp, seedUser, loggedInClient, Client, countRows, insertQuestion, insertAnswer } from '../helpers/server.js';
 
 function files(dir) {
   return fs.readdirSync(dir, { withFileTypes: true }).flatMap((e) => (e.isDirectory() ? files(path.join(dir, e.name)) : [path.join(dir, e.name)]));
@@ -23,7 +23,7 @@ test('src/, public/ 에 외부 URL(localhost·127.0.0.1 제외)이 없다', () =
 test('모든 화면의 link/script/img 참조는 같은 출처이고 CSP 헤더가 있다', async () => {
   const app = await startApp();
   try {
-    seedUser(app, 'EMP0001', '홍길동', 'pw-1234', { answerer: true });
+    await seedUser(app, 'EMP0001', '홍길동', 'pw-1234', { answerer: true });
     const c = await loggedInClient(app, 'EMP0001', 'pw-1234');
     const q = await c.ask({ program_id: 'PRGM0001', title: '제목', body: '내용' });
     const paths = ['/', '/login', '/questions/new', q.location, '/questions/9999', '/nothing'];

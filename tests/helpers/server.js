@@ -4,12 +4,14 @@ import path from 'node:path';
 import { createApp } from '../../src/server.js';
 import { hashPassword } from '../../src/auth.js';
 import { setSink } from '../../src/logger.js';
+import { createTestDb } from './pglite.js';
 
 export async function startApp(opts = {}) {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'qna-'));
   const programsPath = path.join(dir, 'programs.json');
   fs.writeFileSync(programsPath, JSON.stringify(opts.programs ?? ['PRGM0001', 'PRGM0002']));
-  const app = await createApp({ dbPath: ':memory:', programsPath, port: 0, ...(opts.config ?? {}) });
+  const db = await createTestDb();
+  const app = await createApp({ db, programsPath, port: 0, ...(opts.config ?? {}) });
   app.programsPath = programsPath;
   const close = app.close;
   app.close = async () => {
@@ -19,12 +21,35 @@ export async function startApp(opts = {}) {
   return app;
 }
 
-export function seedUser(app, empNo, name, password, { answerer = false } = {}) {
-  const r = app.db
-    .prepare('INSERT INTO users(emp_no, name, password_hash) VALUES (?, ?, ?)')
-    .run(empNo, name, hashPassword(password));
-  if (answerer) app.db.prepare('INSERT INTO answerers(emp_no) VALUES (?)').run(empNo);
-  return Number(r.lastInsertRowid);
+export async function seedUser(app, empNo, name, password, { answerer = false } = {}) {
+  const r = await app.db.get('INSERT INTO users(emp_no, name, password_hash) VALUES ($1, $2, $3) RETURNING id', [
+    empNo,
+    name,
+    hashPassword(password),
+  ]);
+  if (answerer) await app.db.run('INSERT INTO answerers(emp_no) VALUES ($1)', [empNo]);
+  return r.id;
+}
+
+// 질문·답변 직접 삽입, 건수 조회 (테스트 전용)
+export async function insertQuestion(app, programId, title, body, authorId, createdAt, token) {
+  return (
+    await app.db.get(
+      'INSERT INTO questions(program_id, title, body, author_id, created_at, form_token) VALUES ($1, $2, $3, $4, $5, $6) RETURNING id',
+      [programId, title, body, authorId, createdAt, token],
+    )
+  ).id;
+}
+export async function insertAnswer(app, questionId, body, authorId, createdAt, token) {
+  return (
+    await app.db.get(
+      'INSERT INTO answers(question_id, body, author_id, created_at, form_token) VALUES ($1, $2, $3, $4, $5) RETURNING id',
+      [questionId, body, authorId, createdAt, token],
+    )
+  ).id;
+}
+export async function countRows(app, table) {
+  return (await app.db.get(`SELECT COUNT(*)::int AS c FROM ${table}`)).c;
 }
 
 export function captureLogs() {

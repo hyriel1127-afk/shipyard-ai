@@ -1,11 +1,11 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { startApp, seedUser, captureLogs, Client, loggedInClient } from '../helpers/server.js';
+import { startApp, seedUser, captureLogs, Client, loggedInClient, countRows, insertQuestion, insertAnswer } from '../helpers/server.js';
 
 let app;
 test.before(async () => {
   app = await startApp();
-  seedUser(app, 'EMP7731', '홍길동', 'pw-1234');
+  await seedUser(app, 'EMP7731', '홍길동', 'pw-1234');
 });
 test.after(() => app.close());
 
@@ -25,7 +25,7 @@ test('미로그인 POST 는 401 이고 저장되지 않는다', async () => {
     assert.equal(r.status, 401, p);
     assert.match(r.text, /로그인이 필요합니다\./);
   }
-  assert.equal(app.db.prepare('SELECT COUNT(*) c FROM questions').get().c, 0);
+  assert.equal((await countRows(app, 'questions')), 0);
 });
 test('로그인 성공: 303 / + sid 쿠키(HttpOnly, SameSite=Lax)', async () => {
   const res = await fetch(app.url + '/login', {
@@ -55,7 +55,7 @@ test('POST 는 csrf 가 없거나 틀리면 403', async () => {
   const base = { program_id: 'PRGM0001', title: 't', body: 'b', form_token: 'tok-csrf-1' };
   assert.equal((await c.post('/questions', base, { csrf: false })).status, 403);
   assert.equal((await c.post('/questions', base, { csrf: 'wrong' })).status, 403);
-  assert.equal(app.db.prepare('SELECT COUNT(*) c FROM questions').get().c, 0);
+  assert.equal((await countRows(app, 'questions')), 0);
 });
 test('로그아웃 후 세션은 무효', async () => {
   const c = await loggedInClient(app, 'EMP7731', 'pw-1234');

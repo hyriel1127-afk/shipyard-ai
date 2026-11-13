@@ -1,11 +1,11 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { startApp, seedUser, loggedInClient, Client } from '../helpers/server.js';
+import { startApp, seedUser, loggedInClient, Client, countRows, insertQuestion, insertAnswer } from '../helpers/server.js';
 
 let app, c, qid;
 test.before(async () => {
   app = await startApp();
-  seedUser(app, 'EMP0001', '홍길동', 'pw-1234', { answerer: true });
+  await seedUser(app, 'EMP0001', '홍길동', 'pw-1234', { answerer: true });
   c = await loggedInClient(app, 'EMP0001', 'pw-1234');
   const r = await c.ask({ program_id: 'PRGM0001', title: '제목', body: '내용' });
   qid = Number(r.location.split('/').pop());

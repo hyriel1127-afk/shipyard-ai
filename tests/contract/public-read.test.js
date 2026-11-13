@@ -1,17 +1,16 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { startApp, seedUser, captureLogs, Client } from '../helpers/server.js';
+import { startApp, seedUser, captureLogs, Client, countRows, insertQuestion, insertAnswer } from '../helpers/server.js';
 
 // 변경된 요구: 읽기(목록·필터·상세)는 로그인 없이 가능, 로그인 제한은 쓰기(질문 작성·답변)에만 적용.
 let app, qid, logs;
-const count = () => app.db.prepare('SELECT COUNT(*) c FROM questions').get().c;
+const count = () => countRows(app, 'questions');
 
 test.before(async () => {
   app = await startApp({ programs: ['PRGM0001', 'PRGM0002'] });
-  const uid = seedUser(app, 'EMP7731', '홍길동', 'pw-1234');
-  const ins = app.db.prepare('INSERT INTO questions(program_id, title, body, author_id, created_at, form_token) VALUES (?, ?, ?, ?, ?, ?)');
-  qid = Number(ins.run('PRGM0001', '공개 질문 A', '본문 A', uid, Date.now(), 't-pub-1').lastInsertRowid);
-  ins.run('PRGM0002', '공개 질문 B', '본문 B', uid, Date.now(), 't-pub-2');
+  const uid = await seedUser(app, 'EMP7731', '홍길동', 'pw-1234');
+  qid = await insertQuestion(app, 'PRGM0001', '공개 질문 A', '본문 A', uid, Date.now(), 't-pub-1');
+  await insertQuestion(app, 'PRGM0002', '공개 질문 B', '본문 B', uid, Date.now(), 't-pub-2');
   logs = captureLogs();
 });
 test.after(async () => {
@@ -66,10 +65,10 @@ test('미로그인: 질문 작성 화면(GET /questions/new)은 여전히 401', 
 });
 
 test('미로그인: 질문 등록(POST /questions)은 401 이고 저장되지 않는다', async () => {
-  const before = count();
+  const before = (await count());
   const r = await new Client(app).post('/questions', { program_id: 'PRGM0001', title: 't', body: 'b', form_token: 'anon-token-1' }, { csrf: false });
   assert.equal(r.status, 401);
-  assert.equal(count(), before);
+  assert.equal((await count()), before);
 });
 
 test('미로그인: 답변 등록(POST)은 401', async () => {

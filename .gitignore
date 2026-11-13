@@ -1,5 +1,7 @@
-data/*.sqlite*
 node_modules/
 data/*.log
 data/snapshot/
 reports/
+.env
+.vercel/
+data/*.sqlite*

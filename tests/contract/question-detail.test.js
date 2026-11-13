@@ -1,26 +1,24 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { startApp, seedUser, loggedInClient, Client } from '../helpers/server.js';
+import { startApp, seedUser, loggedInClient, Client, countRows, insertQuestion, insertAnswer } from '../helpers/server.js';
 
 // 계약 #7: GET /questions/:id
 let app, asker, reader, qid, emptyQid;
 
 test.before(async () => {
   app = await startApp({ programs: ['PRGM0001', 'PRGM0002'] });
-  const askerId = seedUser(app, 'EMP7731', '홍길동', 'pw-1234');
-  seedUser(app, 'EMP1000', '일반사용자', 'pw-1234');
-  const answererId = seedUser(app, 'EMP9001', '담당자김', 'pw-1234', { answerer: true });
-  seedUser(app, 'EMP9002', '담당자이', 'pw-1234', { answerer: true });
+  const askerId = await seedUser(app, 'EMP7731', '홍길동', 'pw-1234');
+  await seedUser(app, 'EMP1000', '일반사용자', 'pw-1234');
+  const answererId = await seedUser(app, 'EMP9001', '담당자김', 'pw-1234', { answerer: true });
+  await seedUser(app, 'EMP9002', '담당자이', 'pw-1234', { answerer: true });
 
-  const ins = app.db.prepare('INSERT INTO questions(program_id, title, body, author_id, created_at, form_token) VALUES (?, ?, ?, ?, ?, ?)');
   // 2025-01-01T00:30:00Z = 2025-01-01 09:30 KST
-  qid = Number(ins.run('PRGM0002', '<b>로그인 오류</b>', '첫 줄\n<script>alert(1)</script>', askerId, Date.UTC(2025, 0, 1, 0, 30), 'tok-detail-1').lastInsertRowid);
-  emptyQid = Number(ins.run('PRGM0001', '답변 없는 질문', '내용', askerId, Date.UTC(2025, 0, 2), 'tok-detail-2').lastInsertRowid);
+  qid = await insertQuestion(app, 'PRGM0002', '<b>로그인 오류</b>', '첫 줄\n<script>alert(1)</script>', askerId, Date.UTC(2025, 0, 1, 0, 30), 'tok-detail-1');
+  emptyQid = await insertQuestion(app, 'PRGM0001', '답변 없는 질문', '내용', askerId, Date.UTC(2025, 0, 2), 'tok-detail-2');
 
-  const ans = app.db.prepare('INSERT INTO answers(question_id, body, author_id, created_at, form_token) VALUES (?, ?, ?, ?, ?)');
-  ans.run(qid, '첫 번째 답변', answererId, Date.UTC(2025, 0, 1, 1), 'atok-1');
-  ans.run(qid, '두 번째 답변', answererId, Date.UTC(2025, 0, 1, 2), 'atok-2');
-  ans.run(qid, '세 번째 답변', answererId, Date.UTC(2025, 0, 1, 3), 'atok-3');
+  await insertAnswer(app, qid, '첫 번째 답변', answererId, Date.UTC(2025, 0, 1, 1), 'atok-1');
+  await insertAnswer(app, qid, '두 번째 답변', answererId, Date.UTC(2025, 0, 1, 2), 'atok-2');
+  await insertAnswer(app, qid, '세 번째 답변', answererId, Date.UTC(2025, 0, 1, 3), 'atok-3');
 
   reader = await loggedInClient(app, 'EMP1000', 'pw-1234');
   asker = await loggedInClient(app, 'EMP7731', 'pw-1234');

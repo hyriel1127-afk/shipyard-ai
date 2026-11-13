@@ -1,12 +1,12 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { startApp, seedUser, loggedInClient } from '../helpers/server.js';
+import { startApp, seedUser, loggedInClient, countRows, insertQuestion, insertAnswer } from '../helpers/server.js';
 
 let app, client;
 
 test.before(async () => {
   app = await startApp({ programs: ['PRGM0001', 'PRGM0002'] });
-  seedUser(app, 'EMP7731', '홍길동', 'pw-1234');
+  await seedUser(app, 'EMP7731', '홍길동', 'pw-1234');
   client = await loggedInClient(app, 'EMP7731', 'pw-1234');
 });
 test.after(() => app.close());

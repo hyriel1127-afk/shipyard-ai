@@ -1,24 +1,22 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { startApp, seedUser, loggedInClient } from '../helpers/server.js';
+import { startApp, seedUser, loggedInClient, countRows, insertQuestion, insertAnswer } from '../helpers/server.js';
 
 const rows = (text) => [...text.matchAll(/<tr data-question-id="(\d+)">([\s\S]*?)<\/tr>/g)].map((m) => ({ id: Number(m[1]), html: m[2] }));
 const programOf = (row) => row.html.match(/class="program-id">([^<]*)</)[1];
 const NO_MATCH = '해당 프로그램 ID의 질문이 없습니다.';
 
-function seed(app, userId, programId, n) {
-  const ins = app.db.prepare('INSERT INTO questions(program_id, title, body, author_id, created_at, form_token) VALUES (?, ?, ?, ?, ?, ?)');
+async function seed(app, userId, programId, n) {
   const ids = [];
   for (let i = 0; i < n; i++) {
-    const r = ins.run(programId, `${programId} 질문 ${i + 1}`, '내용', userId, Date.now() + ids.length, `tok-${programId}-${i}-${Math.random()}`);
-    ids.push(Number(r.lastInsertRowid));
+    ids.push(await insertQuestion(app, programId, `${programId} 질문 ${i + 1}`, '내용', userId, Date.now() + ids.length, `tok-${programId}-${i}-${Math.random()}`));
   }
   return ids;
 }
 
 async function setup(programs = ['PRGM0001', 'PRGM0002', 'PRGM0003']) {
   const app = await startApp({ programs });
-  const userId = seedUser(app, 'EMP7731', '홍길동', 'pw-1234');
+  const userId = await seedUser(app, 'EMP7731', '홍길동', 'pw-1234');
   const client = await loggedInClient(app, 'EMP7731', 'pw-1234');
   return { app, userId, client };
 }
@@ -26,8 +24,8 @@ async function setup(programs = ['PRGM0001', 'PRGM0002', 'PRGM0003']) {
 test('프로그램 ID 필터: 해당 ID 질문만 보이고, 해제하면 전체가 보인다', async () => {
   const { app, userId, client } = await setup();
   try {
-    seed(app, userId, 'PRGM0001', 3);
-    seed(app, userId, 'PRGM0002', 2);
+    await seed(app, userId, 'PRGM0001', 3);
+    await seed(app, userId, 'PRGM0002', 2);
 
     const f = await client.get('/?program_id=PRGM0001');
     assert.equal(f.status, 200);
@@ -50,7 +48,7 @@ test('프로그램 ID 필터: 해당 ID 질문만 보이고, 해제하면 전체
 test('필터 입력란: 레이블이 있고 현재 값이 유지된다', async () => {
   const { app, userId, client } = await setup();
   try {
-    seed(app, userId, 'PRGM0001', 1);
+    await seed(app, userId, 'PRGM0001', 1);
     const r = await client.get('/?program_id=PRGM0001');
     assert.match(r.text, /<label for="filter-program-id"/);
     assert.match(r.text, /<input[^>]*id="filter-program-id"[^>]*name="program_id"[^>]*value="PRGM0001"|<input[^>]*name="program_id"[^>]*id="filter-program-id"[^>]*value="PRGM0001"/);
@@ -63,8 +61,8 @@ test('필터 입력란: 레이블이 있고 현재 값이 유지된다', async (
 test('필터 결과도 최신 등록순이다', async () => {
   const { app, userId, client } = await setup();
   try {
-    const ids = seed(app, userId, 'PRGM0001', 3);
-    seed(app, userId, 'PRGM0002', 1);
+    const ids = await seed(app, userId, 'PRGM0001', 3);
+    await seed(app, userId, 'PRGM0002', 1);
     const list = rows((await client.get('/?program_id=PRGM0001')).text);
     assert.deepEqual(list.map((r) => r.id), [...ids].reverse());
   } finally {
@@ -75,7 +73,7 @@ test('필터 결과도 최신 등록순이다', async () => {
 test('질문이 없는 프로그램 ID(허용 목록에 있음)로 거르면 안내 문구가 나온다', async () => {
   const { app, userId, client } = await setup();
   try {
-    seed(app, userId, 'PRGM0001', 2);
+    await seed(app, userId, 'PRGM0001', 2);
     const r = await client.get('/?program_id=PRGM0003');
     assert.equal(r.status, 200);
     assert.equal(rows(r.text).length, 0);
@@ -88,14 +86,14 @@ test('질문이 없는 프로그램 ID(허용 목록에 있음)로 거르면 안
 test('형식 오류·미등록 값으로 거르면 오류 없이 빈 목록과 같은 안내 문구가 나온다', async () => {
   const { app, userId, client } = await setup();
   try {
-    seed(app, userId, 'PRGM0001', 2);
+    await seed(app, userId, 'PRGM0001', 2);
     for (const bad of ['prg 1', 'PRGM9999', "'; DROP TABLE questions; --", '%']) {
       const r = await client.get(`/?program_id=${encodeURIComponent(bad)}`);
       assert.equal(r.status, 200, bad);
       assert.equal(rows(r.text).length, 0, bad);
       assert.ok(r.text.includes(NO_MATCH), bad);
     }
-    assert.equal(app.db.prepare('SELECT COUNT(*) c FROM questions').get().c, 2);
+    assert.equal((await countRows(app, 'questions')), 2);
   } finally {
     await app.close();
   }
@@ -104,8 +102,8 @@ test('형식 오류·미등록 값으로 거르면 오류 없이 빈 목록과 �
 test('필터 값의 앞뒤 공백은 제거하고, 부분 일치·와일드카드는 쓰지 않는다', async () => {
   const { app, userId, client } = await setup();
   try {
-    seed(app, userId, 'PRGM0001', 3);
-    seed(app, userId, 'PRGM0002', 1);
+    await seed(app, userId, 'PRGM0001', 3);
+    await seed(app, userId, 'PRGM0002', 1);
     assert.equal(rows((await client.get('/?program_id=%20PRGM0001%20')).text).length, 3);
     assert.equal(rows((await client.get('/?program_id=PRGM')).text).length, 0);
     assert.equal(rows((await client.get('/?program_id=PRGM000_')).text).length, 0);
@@ -130,7 +128,7 @@ test('질문이 하나도 없으면 "등록된 질문이 없습니다."가 나�
 test('한 페이지 20건: 21건이면 2페이지에 1건, 잘못된 page 는 1페이지', async () => {
   const { app, userId, client } = await setup();
   try {
-    seed(app, userId, 'PRGM0001', 21);
+    await seed(app, userId, 'PRGM0001', 21);
     assert.equal(rows((await client.get('/')).text).length, 20);
     assert.equal(rows((await client.get('/?page=2')).text).length, 1);
     for (const bad of ['0', '-3', 'abc', '']) {
@@ -145,8 +143,8 @@ test('한 페이지 20건: 21건이면 2페이지에 1건, 잘못된 page 는 1�
 test('필터와 페이지를 함께 적용하고, 페이지 링크가 필터를 유지한다', async () => {
   const { app, userId, client } = await setup();
   try {
-    seed(app, userId, 'PRGM0001', 25);
-    seed(app, userId, 'PRGM0002', 3);
+    await seed(app, userId, 'PRGM0001', 25);
+    await seed(app, userId, 'PRGM0002', 3);
     const p1 = await client.get('/?program_id=PRGM0001');
     assert.equal(rows(p1.text).length, 20);
     assert.match(p1.text, /href="\/\?program_id=PRGM0001&amp;page=2"/);
@@ -162,8 +160,8 @@ test('필터와 페이지를 함께 적용하고, 페이지 링크가 필터를 
 test('미로그인 상태에서도 필터 조회가 되고 해당 프로그램 ID 질문만 보인다', async () => {
   const { app, userId } = await setup();
   try {
-    seed(app, userId, 'PRGM0001', 1);
-    seed(app, userId, 'PRGM0002', 1);
+    await seed(app, userId, 'PRGM0001', 1);
+    await seed(app, userId, 'PRGM0002', 1);
     const res = await fetch(`${app.url}/?program_id=PRGM0001`);
     assert.equal(res.status, 200);
     const text = await res.text();

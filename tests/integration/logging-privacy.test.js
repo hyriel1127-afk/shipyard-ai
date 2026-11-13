@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { startApp, seedUser, loggedInClient, captureLogs, Client } from '../helpers/server.js';
+import { startApp, seedUser, loggedInClient, captureLogs, Client, countRows, insertQuestion, insertAnswer } from '../helpers/server.js';
 
 test('로그 전체에 사번·이름·제목·본문·쿼리스트링 값이 나오지 않는다', async () => {
   const app = await startApp();
@@ -9,8 +9,8 @@ test('로그 전체에 사번·이름·제목·본문·쿼리스트링 값이 �
   const origErr = process.stderr.write.bind(process.stderr);
   process.stderr.write = (s) => (stderr.push(String(s)), true);
   try {
-    seedUser(app, 'EMP9001', '비밀이름가', 'pw-aaaa', { answerer: true });
-    seedUser(app, 'EMP9002', '비밀이름나', 'pw-bbbb');
+    await seedUser(app, 'EMP9001', '비밀이름가', 'pw-aaaa', { answerer: true });
+    await seedUser(app, 'EMP9002', '비밀이름나', 'pw-bbbb');
     const a = await loggedInClient(app, 'EMP9001', 'pw-aaaa');
     const b = await loggedInClient(app, 'EMP9002', 'pw-bbbb');
     const q = await b.ask({ program_id: 'PRGM0001', title: '비밀제목QQ', body: '비밀본문QQ' });

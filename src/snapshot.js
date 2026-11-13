@@ -1,6 +1,5 @@
 import fs from 'node:fs';
 import path from 'node:path';
-import { DatabaseSync } from 'node:sqlite';
 import { formatKst } from './time.js';
 import { event } from './logger.js';
 
@@ -52,36 +51,25 @@ export function renderSnapshot(questions, answers, nowMs) {
   return parts.join('\n');
 }
 
-// 게시판 DB를 읽기 전용으로 열어 질문·답변을 qna.md 한 파일로 내보낸다.
-// 작성자 컬럼(author_id)과 users 테이블은 조회하지 않는다.
 function fail(code, message, cause) {
   const e = new Error(message, { cause });
   e.code = code;
   return e;
 }
 
-// DB에서 질문·답변을 읽는다. 읽기 전용 연결 + 읽기 트랜잭션 하나로 한 시점의 내용만 얻는다.
-function readBoard(dbPath, afterQuestionsRead) {
-  let db;
+// DB에서 질문·답변을 읽는다. 읽기 전용 REPEATABLE READ 트랜잭션 하나로 한 시점의 내용만 얻는다.
+// 작성자 컬럼(author_id)과 users 테이블은 조회하지 않는다.
+async function readBoard(db, afterQuestionsRead) {
   try {
-    db = new DatabaseSync(dbPath, { readOnly: true });
-    db.exec('BEGIN');
-    try {
-      const questions = db
-        .prepare('SELECT id, program_id, title, body, created_at FROM questions ORDER BY id ASC')
-        .all();
-      if (afterQuestionsRead) afterQuestionsRead();
-      const answers = db
-        .prepare('SELECT question_id, body, created_at FROM answers ORDER BY id ASC')
-        .all();
+    return await db.tx(async (t) => {
+      await t.exec('SET TRANSACTION ISOLATION LEVEL REPEATABLE READ, READ ONLY');
+      const questions = await t.all('SELECT id, program_id, title, body, created_at FROM questions ORDER BY id ASC');
+      if (afterQuestionsRead) await afterQuestionsRead();
+      const answers = await t.all('SELECT question_id, body, created_at FROM answers ORDER BY id ASC');
       return { questions, answers };
-    } finally {
-      db.exec('ROLLBACK');
-    }
+    });
   } catch (e) {
     throw fail('DB_READ', 'board db unreadable', e);
-  } finally {
-    try { db?.close(); } catch {}
   }
 }
 
@@ -98,12 +86,11 @@ function writeAtomic(outPath, text) {
   }
 }
 
-// 게시판 DB를 읽기 전용으로 열어 질문·답변을 qna.md 한 파일로 내보낸다.
-// 작성자 컬럼(author_id)과 users 테이블은 조회하지 않는다.
+// 게시판 DB의 질문·답변을 qna.md 한 파일로 내보낸다(DB는 읽기만 한다).
 // 오류는 code 'DB_READ' | 'WRITE' 로 구분한다. afterQuestionsRead는 테스트 전용 훅이다.
-export function exportSnapshot({ dbPath, outPath, now = Date.now(), afterQuestionsRead }) {
+export async function exportSnapshot({ db, outPath, now = Date.now(), afterQuestionsRead }) {
   try {
-    const { questions, answers } = readBoard(dbPath, afterQuestionsRead);
+    const { questions, answers } = await readBoard(db, afterQuestionsRead);
     writeAtomic(outPath, renderSnapshot(questions, answers, now));
     event({ event: 'snapshot_export', result: 'ok' });
     return { questions: questions.length, answers: answers.length };

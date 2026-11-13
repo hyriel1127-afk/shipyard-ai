@@ -1,0 +1,9 @@
+{
+  "functions": {
+    "api/index.js": {
+      "includeFiles": "{public/**,data/programs.json,src/migrations/**}",
+      "maxDuration": 10
+    }
+  },
+  "rewrites": [{ "source": "/(.*)", "destination": "/api" }]
+}

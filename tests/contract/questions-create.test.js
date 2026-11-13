@@ -1,13 +1,13 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { startApp, seedUser, loggedInClient } from '../helpers/server.js';
+import { startApp, seedUser, loggedInClient, countRows, insertQuestion, insertAnswer } from '../helpers/server.js';
 
 let app, client, userId;
-const count = () => app.db.prepare('SELECT COUNT(*) c FROM questions').get().c;
+const count = () => countRows(app, 'questions');
 
 test.before(async () => {
   app = await startApp({ programs: ['PRGM0001', 'PRGM0002'] });
-  userId = seedUser(app, 'EMP7731', '홍길동', 'pw-1234');
+  userId = await seedUser(app, 'EMP7731', '홍길동', 'pw-1234');
   client = await loggedInClient(app, 'EMP7731', 'pw-1234');
 });
 test.after(() => app.close());
@@ -15,12 +15,12 @@ test.after(() => app.close());
 const valid = (over = {}) => ({ program_id: 'PRGM0001', title: '결재 화면이 열리지 않아요', body: '클릭해도 반응이 없습니다.', ...over });
 
 test('정상 등록: 303 → 상세, 상세·목록에 프로그램 ID·제목 표시, 작성자·작성일시 저장', async () => {
-  const before = count();
+  const before = (await count());
   const t0 = Date.now();
   const r = await client.ask(valid());
   assert.equal(r.status, 303);
   assert.match(r.location, /^\/questions\/\d+$/);
-  assert.equal(count(), before + 1);
+  assert.equal((await count()), before + 1);
 
   const detail = await client.get(r.location);
   assert.equal(detail.status, 200);
@@ -33,18 +33,18 @@ test('정상 등록: 303 → 상세, 상세·목록에 프로그램 ID·제목 �
   assert.equal(list.status, 200);
   assert.ok(list.text.includes('결재 화면이 열리지 않아요'));
 
-  const row = app.db.prepare('SELECT * FROM questions ORDER BY id DESC LIMIT 1').get();
+  const row = await app.db.get('SELECT * FROM questions ORDER BY id DESC LIMIT 1');
   assert.equal(row.author_id, userId);
   assert.equal(row.program_id, 'PRGM0001');
   assert.ok(row.created_at >= t0 - 1000 && row.created_at <= Date.now() + 1000);
 });
 
 test('앞뒤 공백이 있는 프로그램 ID 는 제거 후 등록된다', async () => {
-  const before = count();
+  const before = (await count());
   const r = await client.ask(valid({ program_id: ' PRGM0002 ' }));
   assert.equal(r.status, 303);
-  assert.equal(count(), before + 1);
-  assert.equal(app.db.prepare('SELECT program_id FROM questions ORDER BY id DESC LIMIT 1').get().program_id, 'PRGM0002');
+  assert.equal((await count()), before + 1);
+  assert.equal((await app.db.get('SELECT program_id FROM questions ORDER BY id DESC LIMIT 1')).program_id, 'PRGM0002');
 });
 
 const rejects = [
@@ -61,11 +61,11 @@ const rejects = [
 ];
 for (const [name, over, message, field] of rejects) {
   test(`400: ${name}`, async () => {
-    const before = count();
+    const before = (await count());
     const input = valid({ title: '유지될 제목', body: '유지될 내용', ...over });
     const r = await client.ask(input);
     assert.equal(r.status, 400);
-    assert.equal(count(), before, '질문이 저장되면 안 된다');
+    assert.equal((await count()), before, '질문이 저장되면 안 된다');
     assert.ok(r.text.includes(message), `문구 없음: ${message}`);
     assert.match(r.text, /오류:/);
     assert.match(r.text, /role="alert"/);
@@ -76,17 +76,17 @@ for (const [name, over, message, field] of rejects) {
 }
 
 test('화면을 거치지 않은 직접 POST 도 서버가 허용 목록으로 검증한다', async () => {
-  const before = count();
+  const before = (await count());
   const r = await client.post('/questions', { program_id: 'PRGM9999', title: 't', body: 'b', form_token: 'direct-post-1' });
   assert.equal(r.status, 400);
   assert.ok(r.text.includes('등록되지 않은 프로그램 ID입니다.'));
-  assert.equal(count(), before);
+  assert.equal((await count()), before);
 });
 
 test('태그 필드를 보내도 무시되고 스키마에 태그 열이 없다', async () => {
   const r = await client.ask(valid({ tag: '긴급' }));
   assert.equal(r.status, 303);
-  const cols = app.db.prepare('PRAGMA table_info(questions)').all().map((c) => c.name);
+  const cols = (await app.db.all("SELECT column_name FROM information_schema.columns WHERE table_name = 'questions'")).map((c) => c.column_name);
   assert.ok(!cols.includes('tag') && !cols.includes('tags'));
 });
 

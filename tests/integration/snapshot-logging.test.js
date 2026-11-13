@@ -5,12 +5,13 @@ import path from 'node:path';
 import { exportSnapshot } from '../../src/snapshot.js';
 import { setSink } from '../../src/logger.js';
 import { makeSnapshotFixture } from '../helpers/snapshot-db.js';
+import { createBrokenDb } from '../helpers/pglite.js';
 
-function capture(fn) {
+async function capture(fn) {
   const lines = [];
   setSink((l) => lines.push(l));
   try {
-    fn();
+    await fn();
   } catch {}
   finally {
     setSink(null);
@@ -18,19 +19,18 @@ function capture(fn) {
   return lines;
 }
 
-test('성공·실패 로그에 사번·이름·제목·본문·경로가 없고 허용 필드만 있다', () => {
-  const fx = makeSnapshotFixture();
+test('성공·실패 로그에 사번·이름·제목·본문·경로가 없고 허용 필드만 있다', async () => {
+  const fx = await makeSnapshotFixture();
   try {
-    const u = fx.addUser('EMP9101', '로그비밀이름');
-    const q = fx.addQuestion({ title: '로그비밀제목', body: '로그비밀본문', authorId: u });
-    fx.addAnswer({ questionId: q, body: '로그비밀답변', authorId: u });
-    fx.closeWriter();
+    const u = await fx.addUser('EMP9101', '로그비밀이름');
+    const q = await fx.addQuestion({ title: '로그비밀제목', body: '로그비밀본문', authorId: u });
+    await fx.addAnswer({ questionId: q, body: '로그비밀답변', authorId: u });
     const blocker = path.join(fx.dir, 'blocker');
     fs.writeFileSync(blocker, 'f');
     const lines = [
-      ...capture(() => exportSnapshot({ dbPath: fx.dbPath, outPath: fx.outPath })),
-      ...capture(() => exportSnapshot({ dbPath: path.join(fx.dir, 'none.sqlite'), outPath: fx.outPath })),
-      ...capture(() => exportSnapshot({ dbPath: fx.dbPath, outPath: path.join(blocker, 'qna.md') })),
+      ...(await capture(() => exportSnapshot({ db: fx.db, outPath: fx.outPath }))),
+      ...(await capture(() => exportSnapshot({ db: createBrokenDb(), outPath: fx.outPath }))),
+      ...(await capture(() => exportSnapshot({ db: fx.db, outPath: path.join(blocker, 'qna.md') }))),
     ];
     assert.equal(lines.length, 3);
     const all = lines.join('\n');
@@ -44,6 +44,6 @@ test('성공·실패 로그에 사번·이름·제목·본문·경로가 없고 
       assert.deepEqual(Object.keys(p).sort(), ['at', 'event', 'result']);
     }
   } finally {
-    fx.cleanup();
+    await fx.cleanup();
   }
 });

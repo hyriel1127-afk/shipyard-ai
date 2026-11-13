@@ -19,53 +19,52 @@ export function verifyPassword(password, stored) {
 const DUMMY = hashPassword('dummy-password-for-timing');
 
 // 성공하면 사용자 행, 실패하면 null. 사번 존재 여부는 구분하지 않는다.
-export function authenticate(db, empNo, password) {
-  const user = db.prepare('SELECT id, emp_no, name, password_hash FROM users WHERE emp_no = ?').get(String(empNo ?? ''));
+export async function authenticate(db, empNo, password) {
+  const user = await db.get('SELECT id, emp_no, name, password_hash FROM users WHERE emp_no = $1', [String(empNo ?? '')]);
   const ok = verifyPassword(String(password ?? ''), user ? user.password_hash : DUMMY);
   return user && ok ? user : null;
 }
 
 // 테스트 전용(QNA_DEV_LOGIN=1). 비밀번호를 확인하지 않는다.
-export function authenticateDev(db, empNo) {
-  return db.prepare('SELECT id, emp_no, name FROM users WHERE emp_no = ?').get(String(empNo ?? '')) ?? null;
+export async function authenticateDev(db, empNo) {
+  return db.get('SELECT id, emp_no, name FROM users WHERE emp_no = $1', [String(empNo ?? '')]);
 }
 
 const sha256 = (s) => crypto.createHash('sha256').update(s).digest('hex');
 
-export function createSession(db, userId) {
+export async function createSession(db, userId) {
   const token = crypto.randomBytes(32).toString('hex');
   const csrf = crypto.randomBytes(16).toString('hex');
-  db.prepare('INSERT INTO sessions(token_hash, user_id, csrf_token, expires_at) VALUES (?, ?, ?, ?)').run(
+  await db.run('INSERT INTO sessions(token_hash, user_id, csrf_token, expires_at) VALUES ($1, $2, $3, $4)', [
     sha256(token),
     userId,
     csrf,
     Date.now() + SESSION_MS,
-  );
+  ]);
   return { token, csrf, maxAgeSec: SESSION_MS / 1000 };
 }
 
-export function getSession(db, token) {
+export async function getSession(db, token) {
   if (!token) return null;
-  const row = db
-    .prepare(
-      `SELECT s.csrf_token AS csrf, s.expires_at, u.id AS user_id, u.emp_no, u.name
-       FROM sessions s JOIN users u ON u.id = s.user_id WHERE s.token_hash = ?`,
-    )
-    .get(sha256(token));
+  const row = await db.get(
+    `SELECT s.csrf_token AS csrf, s.expires_at, u.id AS user_id, u.emp_no, u.name
+     FROM sessions s JOIN users u ON u.id = s.user_id WHERE s.token_hash = $1`,
+    [sha256(token)],
+  );
   if (!row) return null;
   if (row.expires_at < Date.now()) {
-    destroySession(db, token);
+    await destroySession(db, token);
     return null;
   }
   return { csrf: row.csrf, user: { id: row.user_id, emp_no: row.emp_no, name: row.name } };
 }
 
-export function destroySession(db, token) {
-  db.prepare('DELETE FROM sessions WHERE token_hash = ?').run(sha256(token));
+export async function destroySession(db, token) {
+  await db.run('DELETE FROM sessions WHERE token_hash = $1', [sha256(String(token ?? ''))]);
 }
 
-export function isAnswerer(db, empNo) {
-  return !!db.prepare('SELECT 1 FROM answerers WHERE emp_no = ?').get(empNo);
+export async function isAnswerer(db, empNo) {
+  return !!(await db.get('SELECT 1 AS x FROM answerers WHERE emp_no = $1', [empNo]));
 }
 
 export function parseCookies(header) {
@@ -77,7 +76,8 @@ export function parseCookies(header) {
   return out;
 }
 
-export function sessionCookie(token, maxAgeSec) {
-  return `sid=${token}; HttpOnly; SameSite=Lax; Path=/; Max-Age=${maxAgeSec}`;
+// secure=true 이면 HTTPS 에서만 쿠키를 보낸다(Vercel 배포 기본).
+export function sessionCookie(token, maxAgeSec, secure = false) {
+  return `sid=${token}; HttpOnly; SameSite=Lax; Path=/; Max-Age=${maxAgeSec}${secure ? '; Secure' : ''}`;
 }
-export const clearCookie = 'sid=; HttpOnly; SameSite=Lax; Path=/; Max-Age=0';
+export const clearCookie = (secure = false) => `sid=; HttpOnly; SameSite=Lax; Path=/; Max-Age=0${secure ? '; Secure' : ''}`;
