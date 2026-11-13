@@ -135,15 +135,15 @@
 
 **Purpose**: 헌법·비기능 요구사항의 마지막 점검
 
-- [ ] T047 [P] `tests/integration/no-external-requests.test.js`: `src/`, `public/`에 외부 URL(`https?://`, localhost 제외)이 없는지 검사, 모든 화면 응답의 `<link>`·`<script>`·`<img>` 참조가 같은 출처인지, CSP 헤더 존재 확인 (NFR-SEC-004, 헌법 V)
-- [ ] T048 [P] `tests/integration/schema-and-scope.test.js`: 스키마에 태그·채택 열이 없고, 수정·삭제·내보내기 라우트가 없으며(404/405), 질문·답변 삭제 경로가 없음을 확인 (FR-006, FR-016, NFR-PRIV-001/002)
-- [ ] T049 [P] `tests/contract/accessibility.test.js`: 모든 화면의 `<input>`/`<textarea>`에 대응 `<label for>`가 있고, 오류 문구가 `aria-describedby`로 연결되며 "오류:" 접두 텍스트가 있고, `<html lang="ko">`임을 마크업 수준에서 검사 (NFR-A11Y-001~003, NFR-L10N-001)
-- [ ] T050 [P] `tests/integration/logging-privacy.test.js`: 질문 등록·답변·권한 거부·로그인 실패·잘못된 요청을 수행하며 캡처한 전체 stdout/stderr에 사번, 이름, 제목, 본문, 쿼리스트링 값이 한 번도 나오지 않음을 검증 (NFR-LOG-002, 헌법 III)
+- [X] T047 [P] `tests/integration/no-external-requests.test.js`: `src/`, `public/`에 외부 URL(`https?://`, localhost 제외)이 없는지 검사, 모든 화면 응답의 `<link>`·`<script>`·`<img>` 참조가 같은 출처인지, CSP 헤더 존재 확인 (NFR-SEC-004, 헌법 V)
+- [X] T048 [P] `tests/integration/schema-and-scope.test.js`: 스키마에 태그·채택 열이 없고, 수정·삭제·내보내기 라우트가 없으며(404/405), 질문·답변 삭제 경로가 없음을 확인 (FR-006, FR-016, NFR-PRIV-001/002)
+- [X] T049 [P] `tests/contract/accessibility.test.js`: 모든 화면의 `<input>`/`<textarea>`에 대응 `<label for>`가 있고, 오류 문구가 `aria-describedby`로 연결되며 "오류:" 접두 텍스트가 있고, `<html lang="ko">`임을 마크업 수준에서 검사 (NFR-A11Y-001~003, NFR-L10N-001)
+- [X] T050 [P] `tests/integration/logging-privacy.test.js`: 질문 등록·답변·권한 거부·로그인 실패·잘못된 요청을 수행하며 캡처한 전체 stdout/stderr에 사번, 이름, 제목, 본문, 쿼리스트링 값이 한 번도 나오지 않음을 검증 (NFR-LOG-002, 헌법 III)
 - [ ] T051 [P] (선택) `tests/integration/readonly-and-programs-unavailable.test.js`: `QNA_READONLY=1`에서 POST 503·GET 정상, `programs.json`이 없을 때 질문 등록 503(잘못된 ID 통과 없음)·읽기는 정상 (plan.md 위험 1, 되돌리기)
-- [ ] T052 [P] `README.md` 갱신: 실행 방법, 환경변수, 관리자 CLI(사용자·답변 담당자), `data/programs.json` 편집 절차, 마이그레이션 up/down 및 down 사용 제한(운영 데이터 이후 금지·사전 백업), 배포 롤백 절차(plan.md "되돌리는 방법"), 실제 사내 배포 시 HTTPS 종단·쿠키 `Secure` 설정이 별도로 필요하다는 한 줄 안내(plan.md 위험 9)
-- [ ] T053 헌법 점검 명령 실행 및 결과 기록: `grep -rnE "https?://" src public`, `grep -rniE "log.*(name|emp_no|empno|사번)" src`, `git diff main -- package.json`(의존성 항목 없음), `grep -rnP "[A-Za-z]{4,}" src/views`로 화면 템플릿의 영문 문구 확인, 외부 네트워크 차단 상태에서 서버 실행·주요 화면 로드. 결과를 PR 설명용 메모로 정리
+- [X] T052 [P] `README.md` 갱신: 실행 방법, 환경변수, 관리자 CLI(사용자·답변 담당자), `data/programs.json` 편집 절차, 마이그레이션 up/down 및 down 사용 제한(운영 데이터 이후 금지·사전 백업), 배포 롤백 절차(plan.md "되돌리는 방법"), 실제 사내 배포 시 HTTPS 종단·쿠키 `Secure` 설정이 별도로 필요하다는 한 줄 안내(plan.md 위험 9)
+- [X] T053 헌법 점검 명령 실행 및 결과 기록: `grep -rnE "https?://" src public`, `grep -rniE "log.*(name|emp_no|empno|사번)" src`, `git diff main -- package.json`(의존성 항목 없음), `grep -rnP "[A-Za-z]{4,}" src/views`로 화면 템플릿의 영문 문구 확인, 외부 네트워크 차단 상태에서 서버 실행·주요 화면 로드. 결과를 PR 설명용 메모로 정리
 - [ ] T054 `quickstart.md`의 수동 시나리오 전체와 성능 확인을 실행해 결과 확인(SC-001 시간 측정 포함), 불일치가 있으면 문서 또는 코드를 수정
-- [ ] T055 `plan.md`의 요구사항 추적표와 실제 테스트 파일명이 일치하는지 대조하고 어긋난 항목을 수정
+- [X] T055 `plan.md`의 요구사항 추적표와 실제 테스트 파일명이 일치하는지 대조하고 어긋난 항목을 수정
 - [ ] T056 [P] (선택) `tests/integration/perf-write.test.js`: 질문 10,000건 시드 DB에서 `POST /questions`와 `POST /questions/:id/answers`(담당자 계정) 각 50회의 p95가 3초 이내인지 측정. 임계값은 환경변수 `PERF_WRITE_MS`로 조정 (NFR-PERF-002)
 
 ---

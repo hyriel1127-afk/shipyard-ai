@@ -99,12 +99,16 @@ tests/
 ├── contract/            # 엔드포인트별 계약 테스트 (먼저 작성)
 │   ├── auth.test.js
 │   ├── questions-create.test.js
-│   ├── questions-list.test.js
+│   ├── questions-list.test.js         # 기본 목록(필터 없음)
+│   ├── questions-list-filter.test.js  # 프로그램 ID 필터·페이지·빈 상태
+│   ├── questions-create-direct.test.js # 화면을 거치지 않은 직접 POST 검증
+│   ├── public-read.test.js            # 읽기 공개(미로그인 GET)
 │   ├── question-detail.test.js
 │   ├── answers-create.test.js
 │   └── accessibility.test.js
-├── integration/         # duplicate-submit, filter-flow, perf-seed, perf-write, migration-roundtrip,
-│                        # no-external-requests, schema-and-scope, logging-privacy, readonly-and-programs-unavailable
+├── integration/         # 작성됨: duplicate-submit, filter-flow, migration-roundtrip,
+│                        # no-external-requests, schema-and-scope, logging-privacy
+│                        # 선택(미작성): perf-seed, perf-write, readonly-and-programs-unavailable
 └── unit/                # validation, programs-file, time, logger, html-escape
 ```
 
@@ -135,8 +139,8 @@ tests/
 | FR-005 | `programs.js` + `data/programs.json`, 서버 측 `has()` 검증 | unit/programs-file, contract/questions-create (`PRGM9999` 400) |
 | FR-006 | 스키마에 태그 열·입력란 없음 | contract/questions-create (태그 필드 무시), integration/schema-and-scope |
 | FR-007 | views: 목록 행·상세 헤더에 program_id 출력 | contract/questions-list, contract/question-detail |
-| FR-008 | 계약 #4 `program_id` 열 조건 + `(program_id, id DESC)` 인덱스, 필터 해제 링크 | contract/questions-list, integration/filter-flow |
-| FR-009 | `ORDER BY id DESC LIMIT 20 OFFSET`, `page` 쿼리 | contract/questions-list (21건 시 2페이지) |
+| FR-008 | 계약 #4 `program_id` 열 조건 + `(program_id, id DESC)` 인덱스, 필터 해제 링크 | contract/questions-list-filter, integration/filter-flow |
+| FR-009 | `ORDER BY id DESC LIMIT 20 OFFSET`, `page` 쿼리 | contract/questions-list-filter (21건 시 2페이지) |
 | FR-010 | `answerers` 테이블, `auth.isAnswerer()` | contract/answers-create (담당자 성공) |
 | FR-011 | 핸들러 첫 단계에서 서버 검사(화면 의존 없음) | contract/answers-create (직접 POST 403, 저장 0건) |
 | FR-012 | 답변 폼은 담당자에게만 렌더링, 읽기 경로는 공통 | contract/question-detail (일반 사용자 폼 없음) |
