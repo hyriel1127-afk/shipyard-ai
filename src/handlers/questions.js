@@ -8,7 +8,8 @@ import { questionDetailPage } from '../views/question-detail.js';
 import { messagePage } from '../views/login.js';
 import { questionNotFoundPage } from '../views/not-found.js';
 
-const view = (ctx) => ({ user: ctx.session.user, csrf: ctx.session.csrf });
+// 읽기 화면은 미로그인(session=null)일 수 있다.
+const view = (ctx) => ({ user: ctx.session?.user ?? null, csrf: ctx.session?.csrf });
 
 export function newForm(ctx) {
   ctx.send(200, questionFormPage({ ...view(ctx), formToken: crypto.randomUUID(), programIds: ctx.programs.list() }));

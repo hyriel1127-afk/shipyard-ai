@@ -16,15 +16,16 @@ import * as answers from './handlers/answers.js';
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const MAX_BODY = 1024 * 1024;
 
-// [method, 경로 정규식, 로그용 경로 템플릿, 인증 필요, 핸들러]
+// [method, 경로 정규식, 로그용 경로 템플릿, 인증, 핸들러]
+// 인증: true=로그인 필수, 'optional'=읽기 공개(로그인했으면 사용자 표시), false=불필요
 const routes = [
   ['GET', /^\/login$/, '/login', false, loginForm],
   ['POST', /^\/login$/, '/login', false, loginSubmit],
   ['POST', /^\/logout$/, '/logout', true, logout],
-  ['GET', /^\/$/, '/', true, questions.list],
+  ['GET', /^\/$/, '/', 'optional', questions.list],
   ['GET', /^\/questions\/new$/, '/questions/new', true, questions.newForm],
   ['POST', /^\/questions$/, '/questions', true, questions.create],
-  ['GET', /^\/questions\/([^/]+)$/, '/questions/:id', true, questions.detail],
+  ['GET', /^\/questions\/([^/]+)$/, '/questions/:id', 'optional', questions.detail],
   ['POST', /^\/questions\/([^/]+)\/answers$/, '/questions/:id/answers', true, answers.create],
 ];
 
@@ -100,11 +101,11 @@ export async function createApp(opts = {}) {
       let session = null;
       if (needAuth) {
         session = getSession(db, sessionToken);
-        if (!session) {
+        if (!session && needAuth !== 'optional') {
           event({ event: 'auth.required', result: 'denied' });
           return send(401, messagePage({ title: M.LOGIN_REQUIRED, message: M.LOGIN_REQUIRED, linkHref: '/login', linkText: M.LOGIN }));
         }
-        if (method === 'POST' && body.csrf !== session.csrf) {
+        if (session && method === 'POST' && body.csrf !== session.csrf) {
           return send(403, messagePage({ title: M.BAD_REQUEST, message: M.BAD_REQUEST, user: session.user, csrf: session.csrf, linkHref: '/', linkText: M.BACK_TO_LIST }));
         }
       }

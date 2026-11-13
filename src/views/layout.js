@@ -13,7 +13,10 @@ export function layout({ title, user, csrf, content }) {
           <button type="submit">${M.LOGOUT}</button>
         </form>
       </nav>`
-    : raw('');
+    : html`<nav aria-label="주 메뉴">
+        <a href="/">${M.NAV_LIST}</a>
+        <a href="/login">${M.LOGIN}</a>
+      </nav>`;
   return String(html`<!doctype html>
 <html lang="ko">
 <head>

@@ -86,7 +86,8 @@ test('상세: 응답 어디에도 답변 담당자 사번 목록이 없다', asy
   assert.ok(!r.text.includes('EMP9001') && !r.text.includes('EMP9002'));
 });
 
-test('상세: 로그인하지 않으면 401', async () => {
+test('상세: 로그인하지 않아도 읽을 수 있다(읽기 공개)', async () => {
   const r = await new Client(app).get(`/questions/${qid}`);
-  assert.equal(r.status, 401);
+  assert.equal(r.status, 200);
+  assert.ok(r.text.includes('첫 번째 답변'));
 });

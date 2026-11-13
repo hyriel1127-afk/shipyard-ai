@@ -9,14 +9,14 @@ test.before(async () => {
 });
 test.after(() => app.close());
 
-test('미로그인 GET 화면은 401 + 로그인 안내', async () => {
+test('미로그인: 질문 작성 화면은 401 + 로그인 안내, 읽기 화면(목록·상세)은 로그인 없이 열린다', async () => {
   const c = new Client(app);
-  for (const p of ['/', '/questions/new', '/questions/1']) {
-    const r = await c.get(p);
-    assert.equal(r.status, 401, p);
-    assert.match(r.text, /로그인이 필요합니다\./);
-    assert.match(r.text, /href="\/login"/);
-  }
+  const w = await c.get('/questions/new');
+  assert.equal(w.status, 401);
+  assert.match(w.text, /로그인이 필요합니다\./);
+  assert.match(w.text, /href="\/login"/);
+  assert.equal((await c.get('/')).status, 200);
+  assert.equal((await c.get('/questions/1')).status, 404); // 없는 질문: 401 이 아니라 404
 });
 test('미로그인 POST 는 401 이고 저장되지 않는다', async () => {
   const c = new Client(app);
@@ -63,7 +63,10 @@ test('로그아웃 후 세션은 무효', async () => {
   const r = await c.post('/logout');
   assert.equal(r.status, 303);
   assert.equal(r.location, '/login');
-  assert.equal((await c.get('/')).status, 401);
+  assert.equal((await c.get('/questions/new')).status, 401);
+  const list = await c.get('/');
+  assert.equal(list.status, 200); // 읽기는 공개
+  assert.ok(!list.text.includes('action="/logout"'), '로그아웃 후에는 로그인 사용자 화면이 아니다');
 });
 test('보안 헤더', async () => {
   const r = await new Client(app).get('/login');
@@ -74,7 +77,7 @@ test('보안 헤더', async () => {
 test('auth.required / login(denied) 로그가 남고 사번·이름은 없다', async () => {
   const cap = captureLogs();
   try {
-    await new Client(app).get('/');
+    await new Client(app).get('/questions/new');
     await new Client(app).login('EMP7731', 'wrong');
     const lines = cap.lines();
     assert.ok(lines.some((l) => l.event === 'auth.required' && l.result === 'denied'));

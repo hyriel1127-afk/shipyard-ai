@@ -159,13 +159,16 @@ test('필터와 페이지를 함께 적용하고, 페이지 링크가 필터를 
   }
 });
 
-test('미로그인 상태의 필터 조회는 401 이고 내용이 노출되지 않는다', async () => {
+test('미로그인 상태에서도 필터 조회가 되고 해당 프로그램 ID 질문만 보인다', async () => {
   const { app, userId } = await setup();
   try {
     seed(app, userId, 'PRGM0001', 1);
+    seed(app, userId, 'PRGM0002', 1);
     const res = await fetch(`${app.url}/?program_id=PRGM0001`);
-    assert.equal(res.status, 401);
-    assert.ok(!(await res.text()).includes('PRGM0001 질문'));
+    assert.equal(res.status, 200);
+    const text = await res.text();
+    assert.ok(text.includes('PRGM0001 질문'));
+    assert.ok(!text.includes('PRGM0002 질문'));
   } finally {
     await app.close();
   }
