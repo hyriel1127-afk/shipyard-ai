@@ -13,7 +13,7 @@
 
 ## Requirement Completeness
 
-- [ ] No [NEEDS CLARIFICATION] markers remain (3건 남음: FR-004 프로그램 ID 형식, FR-005 허용 목록 관리 방법, NFR-PRIV-001 보관 기간)
+- [x] No [NEEDS CLARIFICATION] markers remain (3건 남음: FR-004 프로그램 ID 형식, FR-005 허용 목록 관리 방법, NFR-PRIV-001 보관 기간)
 - [x] Requirements are testable and unambiguous
 - [x] Success criteria are measurable
 - [x] Success criteria are technology-agnostic (no implementation details)
