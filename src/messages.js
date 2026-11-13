@@ -17,6 +17,10 @@ export const M = {
   TITLE_TOO_LONG: '제목은 100자 이내로 입력해 주세요.',
   BODY_REQUIRED: '내용을 입력해 주세요.',
   BODY_TOO_LONG: '내용은 4,000자 이내로 입력해 주세요.',
+  ANSWER_REQUIRED: '답변 내용을 입력해 주세요.',
+  ANSWER_TOO_LONG: '답변은 4,000자 이내로 입력해 주세요.',
+  SUBMIT_ANSWER: '답변 등록',
+  ANSWER_BODY: '답변 내용',
 
   EMPTY_LIST: '등록된 질문이 없습니다.',
   NO_MATCH: '해당 프로그램 ID의 질문이 없습니다.',
@@ -56,4 +60,10 @@ export const ERROR_TEXT = {
   TITLE_TOO_LONG: M.TITLE_TOO_LONG,
   BODY_REQUIRED: M.BODY_REQUIRED,
   BODY_TOO_LONG: M.BODY_TOO_LONG,
+};
+
+// 답변 화면 전용: 공통 검증 코드(BODY_*)를 답변 문구로 바꾼다.
+export const ANSWER_ERROR_TEXT = {
+  BODY_REQUIRED: M.ANSWER_REQUIRED,
+  BODY_TOO_LONG: M.ANSWER_TOO_LONG,
 };

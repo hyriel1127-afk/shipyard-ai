@@ -1,5 +1,6 @@
 import crypto from 'node:crypto';
 import { validate } from '../validation.js';
+import { isAnswerer } from '../auth.js';
 import { event } from '../logger.js';
 import { M } from '../messages.js';
 import { questionFormPage } from '../views/question-form.js';
@@ -69,24 +70,42 @@ export function list(ctx) {
   ctx.send(200, questionListPage({ ...view(ctx), questions: rows.slice(0, PAGE_SIZE), filter, page, hasNext, programIds: ctx.programs.list() }));
 }
 
-export function detail(ctx) {
-  const id = ctx.params.id;
-  const question = /^[1-9]\d{0,15}$/.test(id) // 양의 정수만 허용
-    ? ctx.db
+export function findQuestion(db, id) {
+  return /^[1-9]\d{0,15}$/.test(id) // 양의 정수만 허용
+    ? db
         .prepare(
           `SELECT q.id, q.program_id, q.title, q.body, q.created_at, u.name AS author_name
            FROM questions q JOIN users u ON u.id = q.author_id WHERE q.id = ?`,
         )
         .get(Number(id))
     : null;
-  if (!question) {
-    return ctx.send(404, questionNotFoundPage(view(ctx)));
-  }
+}
+
+// 상세 렌더링. 답변 400 재렌더링에서도 재사용한다(status, answerForm 으로 입력·오류 전달).
+export function renderDetail(ctx, question, { status = 200, answerForm = {} } = {}) {
   const answers = ctx.db
     .prepare(
       `SELECT a.id, a.body, a.created_at, u.name AS author_name
        FROM answers a JOIN users u ON u.id = a.author_id WHERE a.question_id = ? ORDER BY a.id ASC`,
     )
     .all(question.id);
-  ctx.send(200, questionDetailPage({ ...view(ctx), question, answers }));
+  const canAnswer = !!ctx.session && isAnswerer(ctx.db, ctx.session.user.emp_no);
+  ctx.send(
+    status,
+    questionDetailPage({
+      ...view(ctx),
+      question,
+      answers,
+      canAnswer,
+      answerToken: canAnswer ? answerForm.formToken ?? crypto.randomUUID() : undefined,
+      answerValues: answerForm.values,
+      answerErrors: answerForm.errors,
+    }),
+  );
+}
+
+export function detail(ctx) {
+  const question = findQuestion(ctx.db, ctx.params.id);
+  if (!question) return ctx.send(404, questionNotFoundPage(view(ctx)));
+  renderDetail(ctx, question);
 }

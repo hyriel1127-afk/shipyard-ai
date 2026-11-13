@@ -119,13 +119,13 @@
 
 ### Tests for User Story 3 (먼저 작성, 실패 확인)
 
-- [ ] T043 [P] [US3] `tests/contract/answers-create.test.js`: 계약 #8. 담당자 → 303 `/questions/:id`, 답변 수 +1, 작성일시 KST 표시, 여러 답변이 등록 순서로 표시. **비담당자가 화면을 거치지 않고 직접 POST** → 403 "답변 권한이 없습니다.", 답변 수 불변, DB 쓰기 없음(여러 비담당자 계정으로 반복, SC-004). 미로그인 POST → 401 "로그인이 필요합니다." 저장 없음. 없는 질문에 담당자가 POST → 404 "존재하지 않는 질문입니다." 저장 없음. 내용 공백 → 400 "답변 내용을 입력해 주세요.", 4,001자 → 400 "답변은 4,000자 이내로 입력해 주세요.". 같은 `form_token` 재전송 시 1건만. 검사 순서(401 → 403 → 404 → 400) 확인. 답변 담당자 목록에서 제거된 사용자의 새 답변은 거부되고 이전 답변은 유지. 로그에 `answer.create`/`auth.denied`가 `ref_id`·`user_id`만으로 기록되고 사번·이름·본문이 없음 (FR-010~013, FR-017, NFR-SEC-002, NFR-LOG)
+- [X] T043 [P] [US3] `tests/contract/answers-create.test.js`: 계약 #8. 담당자 → 303 `/questions/:id`, 답변 수 +1, 작성일시 KST 표시, 여러 답변이 등록 순서로 표시. **비담당자가 화면을 거치지 않고 직접 POST** → 403 "답변 권한이 없습니다.", 답변 수 불변, DB 쓰기 없음(여러 비담당자 계정으로 반복, SC-004). 미로그인 POST → 401 "로그인이 필요합니다." 저장 없음. 없는 질문에 담당자가 POST → 404 "존재하지 않는 질문입니다." 저장 없음. 내용 공백 → 400 "답변 내용을 입력해 주세요.", 4,001자 → 400 "답변은 4,000자 이내로 입력해 주세요.". 같은 `form_token` 재전송 시 1건만. 검사 순서(401 → 403 → 404 → 400) 확인. 답변 담당자 목록에서 제거된 사용자의 새 답변은 거부되고 이전 답변은 유지. 로그에 `answer.create`/`auth.denied`가 `ref_id`·`user_id`만으로 기록되고 사번·이름·본문이 없음 (FR-010~013, FR-017, NFR-SEC-002, NFR-LOG)
 
 ### Implementation for User Story 3
 
-- [ ] T044 [US3] `src/handlers/answers.js`: `POST /questions/:id/answers` — 로그인(401) → CSRF → `auth.isAnswerer()` 서버 검사(403, `auth.denied` 로그, DB 쓰기 없음) → 질문 존재(404) → `validate()` 공통 검증(400, 입력 유지) → `form_token` 중복 확인(이미 쓰였으면 기존 상세로 303) → 저장(`author_id`, `created_at`) → 303. 성공 시 `answer.create` 로그 (T043 통과, T023·T022 의존)
-- [ ] T045 [P] [US3] `src/views/question-detail.js` 수정: 현재 사용자가 답변 담당자일 때만 답변 입력란(레이블, 오류 `aria-describedby`)과 등록 버튼을 렌더링(부가 처리이며 권한의 기준이 아님). 담당자 목록은 어떤 형태로도 출력하지 않음
-- [ ] T046 [US3] `src/server.js` 라우팅 표에 계약 #8을 연결하고, 400 재렌더링 시 상세 화면과 질문·기존 답변이 함께 보이도록 `src/handlers/questions.js`의 상세 렌더링 함수를 재사용 (T044 의존)
+- [X] T044 [US3] `src/handlers/answers.js`: `POST /questions/:id/answers` — 로그인(401) → CSRF → `auth.isAnswerer()` 서버 검사(403, `auth.denied` 로그, DB 쓰기 없음) → 질문 존재(404) → `validate()` 공통 검증(400, 입력 유지) → `form_token` 중복 확인(이미 쓰였으면 기존 상세로 303) → 저장(`author_id`, `created_at`) → 303. 성공 시 `answer.create` 로그 (T043 통과, T023·T022 의존)
+- [X] T045 [P] [US3] `src/views/question-detail.js` 수정: 현재 사용자가 답변 담당자일 때만 답변 입력란(레이블, 오류 `aria-describedby`)과 등록 버튼을 렌더링(부가 처리이며 권한의 기준이 아님). 담당자 목록은 어떤 형태로도 출력하지 않음
+- [X] T046 [US3] `src/server.js` 라우팅 표에 계약 #8을 연결하고, 400 재렌더링 시 상세 화면과 질문·기존 답변이 함께 보이도록 `src/handlers/questions.js`의 상세 렌더링 함수를 재사용 (T044 의존)
 
 **Checkpoint**: 세 스토리 모두 독립적으로 동작하고 `npm test` 전체 통과.
 
