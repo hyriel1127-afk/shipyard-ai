@@ -1,0 +1,8 @@
+{
+  "mcpServers": {
+    "qna-report": {
+      "command": "node",
+      "args": ["scripts/mcp-qna-report.js"]
+    }
+  }
+}

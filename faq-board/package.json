@@ -1,0 +1,25 @@
+{
+  "name": "faq-board",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=24"
+  },
+  "scripts": {
+    "start": "node src/server.js",
+    "test": "node --test",
+    "migrate": "node scripts/migrate.js",
+    "admin": "node scripts/admin.js",
+    "snapshot": "node scripts/export-snapshot.js",
+    "digest": "node scripts/weekly-digest.js",
+    "seed": "node scripts/seed-test-data.js",
+    "start:demo": "node scripts/start-demo.js"
+  },
+  "dependencies": {
+    "@neondatabase/serverless": "^1.2.0"
+  },
+  "devDependencies": {
+    "@electric-sql/pglite": "^0.5.16"
+  }
+}

@@ -1,0 +1,24 @@
+{
+  "hooks": {
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node",
+            "args": [
+              "${CLAUDE_PROJECT_DIR}/.claude/hooks/require-green.cjs"
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "permissions": {
+    "allow": [
+      "Bash(node scripts/weekly-digest.js)",
+      "Bash(node scripts/export-qna-snapshot.js)",
+      "Write(reports/**)"
+    ]
+  }
+}
